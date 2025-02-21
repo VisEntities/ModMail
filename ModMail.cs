@@ -24,6 +24,7 @@ namespace Oxide.Plugins
         private StoredData _storedData;
 
         private readonly Dictionary<StorageContainer, bool> _spawnedContainers = new Dictionary<StorageContainer, bool>();
+        private Dictionary<ulong, DateTime> _lastMailTimes = new Dictionary<ulong, DateTime>();
 
         private const string PREFAB_STORAGE = "assets/prefabs/deployable/large wood storage/box.wooden.large.prefab";
 
@@ -44,6 +45,9 @@ namespace Oxide.Plugins
 
             [JsonProperty("Maximum Archive Capacity")]
             public int MaximumArchiveCapacity { get; set; }
+
+            [JsonProperty("Mail Cooldown Seconds")]
+            public float MailCooldownSeconds { get; set; }
 
             [JsonProperty("Discord Webhook Url")]
             public string DiscordWebhookUrl { get; set; }
@@ -91,6 +95,7 @@ namespace Oxide.Plugins
                 SendMailChatCommand = "sendmail",
                 OpenMailArchiveChatCommand = "openmail",
                 MaximumArchiveCapacity = 48,
+                MailCooldownSeconds = 60f,
                 DiscordWebhookUrl = ""
             };
         }
@@ -420,6 +425,19 @@ namespace Oxide.Plugins
                 return;
             }
 
+            DateTime lastTime;
+            if (_lastMailTimes.TryGetValue(player.userID, out lastTime))
+            {
+                double secondsSince = (DateTime.UtcNow - lastTime).TotalSeconds;
+                if (secondsSince < _config.MailCooldownSeconds)
+                {
+                    MessagePlayer(player, Lang.MailCooldown);
+                    return;
+                }
+            }
+
+            _lastMailTimes[player.userID] = DateTime.UtcNow;
+
             StorageContainer container = CreateStorageContainer(shouldCaptureNote: true);
             if (container == null)
             {
@@ -478,6 +496,7 @@ namespace Oxide.Plugins
             public const string EmptyNote = "EmptyNote";
             public const string NewMailAlert = "NewMailAlert";
             public const string DiscordMailAlert = "DiscordMailAlert";
+            public const string MailCooldown = "MailCooldown";
         }
 
         protected override void LoadDefaultMessages()
@@ -492,7 +511,8 @@ namespace Oxide.Plugins
                 [Lang.MailSent] = "Thanks! Your note has been sent to the admins.",
                 [Lang.EmptyNote] = "Your note is empty. Please type something before sending.",
                 [Lang.NewMailAlert] = "New mail received from {0}. Use /openmail to view the archive.",
-                [Lang.DiscordMailAlert] = "From: {0} ({1})\nTime: {2}\n```{3}```"
+                [Lang.DiscordMailAlert] = "From: {0} ({1})\nTime: {2}\n```{3}```",
+                [Lang.MailCooldown] = "Hold up! You cannot send another mail yet."
 
             }, this, "en");
         }
