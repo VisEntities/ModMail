@@ -14,7 +14,7 @@ using System.IO;
 namespace Oxide.Plugins
 {
     [Info("Mod Mail", "VisEntities", "1.0.0")]
-    [Description(" ")]
+    [Description("Provides an in-game mailbox system for players to contact admins.")]
     public class ModMail : RustPlugin
     {
         #region Fields
